@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.jozeftvrdy.game.guessorder.navigation.NavigationRoot
 import com.jozeftvrdy.game.guessorder.ui.theme.GuessOrderGameTheme
 
 class MainActivity : ComponentActivity() {
@@ -20,9 +21,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             GuessOrderGameTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
+                    NavigationRoot(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
                     )
                 }
             }
