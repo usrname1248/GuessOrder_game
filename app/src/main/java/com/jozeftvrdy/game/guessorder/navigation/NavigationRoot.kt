@@ -7,11 +7,9 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.jozeftvrdy.game.guessorder.game.create.CreateGameScreen
+import com.jozeftvrdy.game.guessorder.game.model.InitialGameData
 import com.jozeftvrdy.game.guessorder.game.play.GameScreen
 import kotlinx.serialization.Serializable
-
-@Serializable
-data object InitialGameData
 
 @Serializable
 data object CreateGameNavScreen : NavKey

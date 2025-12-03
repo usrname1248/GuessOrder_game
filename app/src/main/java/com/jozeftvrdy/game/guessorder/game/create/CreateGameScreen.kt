@@ -8,11 +8,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.jozeftvrdy.game.guessorder.navigation.InitialGameData
+import com.jozeftvrdy.game.guessorder.game.model.InitialGameData
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun CreateGameScreen(
-    onPrimaryBtnClick: (InitialGameData) -> Unit
+    onPrimaryBtnClick: (InitialGameData) -> Unit,
+    viewModel: CreateGameScreenViewModel = koinViewModel()
 ) {
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -24,8 +26,8 @@ fun CreateGameScreen(
             modifier =
                 Modifier
                     .align(alignment = Alignment.BottomCenter),
-            onClick = remember {{
-                onPrimaryBtnClick(InitialGameData)
+            onClick = remember(viewModel) {{
+                viewModel.onClick(gameData = InitialGameData(0,0))
             }}
         ) {
             Text("Create")
