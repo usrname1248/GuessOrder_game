@@ -21,4 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "GuessOrder game"
 include(":app")
- 
+include(":core:database")
+include(":mylibrary")
