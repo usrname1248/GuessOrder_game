@@ -1,6 +1,5 @@
 package com.jozeftvrdy.game.guessorder.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -10,6 +9,17 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
+
+@Preview(showBackground = true, backgroundColor = 0, uiMode = 32)
+annotation class DarkPreview
+
+@Preview(showBackground = true, backgroundColor = 16777215)
+annotation class LightPreview
+
+@LightPreview
+@DarkPreview
+annotation class ThemePreview
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
