@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">GuessOrder game</string>
+    <string name="create_game_screen_desc">Select number of tiles…</string>
+    <string name="create_game_screen_desc2">… and number of colors you want to play with.</string>
 </resources>
