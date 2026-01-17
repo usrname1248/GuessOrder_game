@@ -8,7 +8,7 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.jozeftvrdy.game.guessorder.game.create.CreateGameScreen
 import com.jozeftvrdy.game.guessorder.game.model.InitialGameData
-import com.jozeftvrdy.game.guessorder.game.play.GameScreen
+import com.jozeftvrdy.game.guessorder.game.play.PlayGameScreen
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -46,7 +46,7 @@ fun NavigationRoot(
                     NavEntry(
                         key = key
                     ) {
-                        GameScreen(
+                        PlayGameScreen(
                             initialGameData = key.initData,
                             onGameFinish = {
                                 backStack.clear()

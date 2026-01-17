@@ -2,6 +2,8 @@ package com.jozeftvrdy.game.guessorder.di
 
 import com.jozeftvrdy.game.guessorder.repository.GameRepository
 import com.jozeftvrdy.game.guessorder.repository.GameRepositoryImpl
+import com.jozeftvrdy.game.guessorder.repository.PlayGameRepository
+import com.jozeftvrdy.game.guessorder.repository.PlayGameRepositoryImpl
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import org.koin.dsl.module
@@ -12,6 +14,10 @@ val appModule = module {
             get(),
             get(),
         )
+    }
+
+    factory<PlayGameRepository> {
+        PlayGameRepositoryImpl()
     }
 
     single<AppDispatchers> {

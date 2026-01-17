@@ -2,4 +2,14 @@
     <string name="app_name">GuessOrder game</string>
     <string name="create_game_screen_desc">Select number of tiles…</string>
     <string name="create_game_screen_desc2">… and number of colors you want to play with.</string>
+    <plurals name="great_success_description">
+        <item quantity="one">%d correct color on correct place</item>
+        <item quantity="other">%d correct colors on correct places</item>
+    </plurals>
+    <string name="great_success_icon_description">Correct color on correct place</string>
+    <plurals name="mild_success_description">
+        <item quantity="one">%d correct color, but on incorrect place</item>
+        <item quantity="other">%d correct colors, but on incorrect places</item>
+    </plurals>
+    <string name="mild_success_icon_description">Correct color, but on incorrect place</string>
 </resources>

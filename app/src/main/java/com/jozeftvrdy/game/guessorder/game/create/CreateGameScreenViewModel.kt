@@ -6,20 +6,6 @@ import com.jozeftvrdy.game.guessorder.game.model.InitialGameData
 import com.jozeftvrdy.game.guessorder.repository.GameRepository
 import kotlinx.coroutines.launch
 
-sealed class ScreenState {
-    data object Loading: ScreenState()
-    data class Loaded(
-        val savedInitialGameData: InitialGameData,
-        val tilesValueRange: IntRange,
-        val colorsValueRange: IntRange,
-    ): ScreenState()
-
-}
-
-sealed class ScreenEffect {
-    data class NavigateToGame(val gameData: InitialGameData): ScreenEffect()
-}
-
 private const val TilesFromValue = 2
 private const val TilesToValue = 8
 private const val ColorsFromValue = 2

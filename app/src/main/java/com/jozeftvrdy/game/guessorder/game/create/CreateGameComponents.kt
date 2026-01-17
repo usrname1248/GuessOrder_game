@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -66,6 +67,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.jozeftvrdy.game.guessorder.extension.ifNotNull
+import com.jozeftvrdy.game.guessorder.ui.dimens.CreateGameDimens
 import com.jozeftvrdy.game.guessorder.ui.dimens.createGameDimens
 import com.jozeftvrdy.game.guessorder.ui.theme.GuessOrderGameTheme
 import com.jozeftvrdy.game.guessorder.ui.theme.ThemePreview
@@ -111,16 +113,13 @@ fun TilesRow(
                 .align(Alignment.Center)
         )
 
-
-        Row(
-            modifier = modifier
-                .zIndex(2f)
-        ) {
-            (1..pickedValueRange.last).forEachIndexed { index, value ->
-                if (index > 0) {
-                    Spacer(modifier = Modifier.weight(tileSpacerWeight))
-                }
-                val isSelectedState = if (value < pickedValueRange.first) {
+        ImmutableTilesRow(
+            pickedValueRange = pickedValueRange,
+            getColor = getColor,
+            selectedColor = selectedColor,
+            unselectedColor = unselectedColor,
+            getIsSelectedState = { index, value ->
+                if (value < pickedValueRange.first) {
                     remember(index) {
                         mutableStateOf(true)
                     }
@@ -135,26 +134,60 @@ fun TilesRow(
                         }
                     }
                 }
+            },
+            onTileClick = onTileClick,
+            betweenItemsSpacer = remember {
+                {
+                    Spacer(modifier = Modifier.weight(tileSpacerWeight))
+                }
+            },
+            dimens = dimens,
+            modifier = Modifier.zIndex(2f)
+        )
 
-                Tile(
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .widthIn(min = dimens.minTileSize, max = dimens.maxTileSize)
-                        .aspectRatio(1f),
-                    tileColor = getColor(index),
-                    isSelectedState = isSelectedState,
-                    selectedColor = selectedColor,
-                    unselectedColor = unselectedColor,
-                    onTileClick = remember(value, pickedValueRange) {
+    }
+}
+
+@Composable
+fun ImmutableTilesRow(
+    pickedValueRange: IntRange,
+    getColor: @Composable (index: Int) -> Color?,
+    getIsSelectedState: @Composable (index:Int, tileValue: Int) -> State<Boolean>,
+    selectedColor: Color,
+    unselectedColor: Color,
+    onTileClick: ((tileValue: Int) -> Unit)?,
+    modifier: Modifier = Modifier,
+    dimens: CreateGameDimens = createGameDimens,
+    betweenItemsSpacer: @Composable RowScope.() -> Unit = {}
+) {
+    Row(
+        modifier = modifier
+    ) {
+
+        (1..pickedValueRange.last).forEachIndexed { index, value ->
+            if (index > 0) {
+                betweenItemsSpacer()
+            }
+
+            Tile(
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .widthIn(min = dimens.minTileSize, max = dimens.maxTileSize)
+                    .aspectRatio(1f),
+                tileColor = getColor(index),
+                isSelectedState = getIsSelectedState(index, value),
+                selectedColor = selectedColor,
+                unselectedColor = unselectedColor,
+                onTileClick = onTileClick?.let {
+                    remember(value, pickedValueRange) {
                         {
                             onTileClick.invoke(value.coerceIn(pickedValueRange))
                         }
                     }
-                )
-            }
+                }
+            )
         }
     }
-
 }
 
 @Composable

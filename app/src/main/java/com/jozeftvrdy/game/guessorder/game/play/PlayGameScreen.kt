@@ -10,7 +10,7 @@ import androidx.compose.ui.Modifier
 import com.jozeftvrdy.game.guessorder.game.model.InitialGameData
 
 @Composable
-fun GameScreen(
+fun PlayGameScreen(
     initialGameData: InitialGameData,
     onGameFinish: () -> Unit,
 ) {
