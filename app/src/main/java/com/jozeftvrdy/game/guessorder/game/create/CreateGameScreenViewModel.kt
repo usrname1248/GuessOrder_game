@@ -1,17 +1,22 @@
 package com.jozeftvrdy.game.guessorder.game.create
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.jozeftvrdy.game.guessorder.base.BaseViewModel
 import com.jozeftvrdy.game.guessorder.game.model.InitialGameData
+import com.jozeftvrdy.game.guessorder.game.model.ItemFill
 import com.jozeftvrdy.game.guessorder.repository.GameRepository
 import kotlinx.coroutines.launch
 
-private const val TilesFromValue = 2
-private const val TilesToValue = 8
-private const val ColorsFromValue = 2
-private const val ColorsToValue = 8
+private const val SelectableTilesMinValue = 2
+private const val SelectableTilesMaxValue = 8
+private const val TilesMaxValue = 8
+private const val SelectableColorsMinValue = 2
+private const val SelectableColorsMaxValue = 8
+private const val ColorsMaxValue = 8
 
 class CreateGameScreenViewModel(
+    override val savedStateHandle: SavedStateHandle,
     private val gameRepo: GameRepository
 ): BaseViewModel<ScreenState, ScreenEffect>() {
 
@@ -29,20 +34,20 @@ class CreateGameScreenViewModel(
         }
 
         viewModelScope.launch {
-            val tilesRange = TilesFromValue..TilesToValue
-            val colorsRange = ColorsFromValue..ColorsToValue
-
-            val initialData = gameRepo.getInitialData().let { data ->
-                data.copy(
-                    tilesCount = data.tilesCount.coerceIn(tilesRange),
-                    colorsCount = data.colorsCount.coerceIn(colorsRange),
-                )
-            }
+            val initialData = gameRepo.getInitialData()
             updateState {
                 ScreenState.Loaded(
-                    initialData,
-                    tilesValueRange = tilesRange,
-                    colorsValueRange = colorsRange,
+                    tileCountRowData = ScreenState.Loaded.RowData(
+                        initialCount = initialData.tilesCount,
+                        maxCount = TilesMaxValue,
+                        selectableRange = SelectableTilesMinValue..SelectableTilesMaxValue,
+                    ),
+                    fillCountRowData = ScreenState.Loaded.RowData(
+                        initialCount = initialData.colorsCount,
+                        maxCount = ColorsMaxValue,
+                        selectableRange = SelectableColorsMinValue..SelectableColorsMaxValue,
+                    ),
+                    fills = ItemFill.getFirstN(ColorsMaxValue)
                 )
             }
         }

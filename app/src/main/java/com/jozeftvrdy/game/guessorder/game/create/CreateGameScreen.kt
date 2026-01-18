@@ -1,20 +1,23 @@
 package com.jozeftvrdy.game.guessorder.game.create
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
@@ -38,9 +41,10 @@ import com.jozeftvrdy.game.guessorder.extension.rememberFunction
 import com.jozeftvrdy.game.guessorder.game.model.InitialGameData
 import com.jozeftvrdy.game.guessorder.ui.components.FullScreenProgressIndicator
 import com.jozeftvrdy.game.guessorder.ui.dimens.screenDimens
-import com.jozeftvrdy.game.guessorder.ui.theme.tileColors
+import com.jozeftvrdy.game.guessorder.ui.provider.ColorProvider
 import kotlinx.collections.immutable.toPersistentList
-import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.roundToInt
 
 object PickedValueSaver: Saver<MutableState<PickedValue>, Int> {
@@ -57,7 +61,8 @@ object PickedValueSaver: Saver<MutableState<PickedValue>, Int> {
 @Composable
 fun CreateGameScreen(
     onPrimaryBtnClick: (InitialGameData) -> Unit,
-    viewModel: CreateGameScreenViewModel = koinViewModel()
+    viewModel: CreateGameScreenViewModel = koinViewModel(),
+    colorProvider: ColorProvider = koinInject()
 ) {
     listenToEffects(viewModel.effect) { effect ->
         when (effect) {
@@ -67,45 +72,44 @@ fun CreateGameScreen(
 
     val state = viewModel.state.collectAsStateWithLifecycle()
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize()
-    ) { scaffoldPadding ->
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
         CreateGameScreenAnyContent(
-            scaffoldPadding = scaffoldPadding,
             screenState = state,
-            onPrimaryBtnClick = viewModel.rememberFunction(viewModel::eventOnPrimaryBtnClick)
+            onPrimaryBtnClick = viewModel.rememberFunction(viewModel::eventOnPrimaryBtnClick),
+            colorProvider = colorProvider,
         )
     }
 }
 
 @Composable
 fun CreateGameScreenAnyContent(
-    scaffoldPadding: PaddingValues,
     screenState: State<ScreenState>,
-    onPrimaryBtnClick: (InitialGameData) -> Unit
+    onPrimaryBtnClick: (InitialGameData) -> Unit,
+    colorProvider: ColorProvider,
 ) {
     CreateGameScreenContent(
-        scaffoldPadding = scaffoldPadding,
         screenState = screenState.value,
         onPrimaryBtnClick = onPrimaryBtnClick,
+        colorProvider = colorProvider,
     )
 }
 
 @Composable
 fun CreateGameScreenContent(
-    scaffoldPadding: PaddingValues,
     screenState: ScreenState,
-    onPrimaryBtnClick: (InitialGameData) -> Unit
+    onPrimaryBtnClick: (InitialGameData) -> Unit,
+    colorProvider: ColorProvider,
 ) {
     AnimatedContent(screenState) { animatedState ->
         when (animatedState) {
-            ScreenState.Loading -> CreateGameScreenLoadingContent(
-                scaffoldPadding = scaffoldPadding
-            )
+            ScreenState.Loading -> CreateGameScreenLoadingContent()
             is ScreenState.Loaded -> CreateGameScreenDataContent(
-                scaffoldPadding = scaffoldPadding,
                 loadedState = animatedState,
                 onPrimaryBtnClick = onPrimaryBtnClick,
+                colorProvider = colorProvider,
             )
         }
     }
@@ -113,34 +117,26 @@ fun CreateGameScreenContent(
 
 @Composable
 fun CreateGameScreenLoadingContent(
-    scaffoldPadding: PaddingValues
 ) {
-    FullScreenProgressIndicator(
-        modifier = Modifier
-            .padding(scaffoldPadding)
-    )
+    FullScreenProgressIndicator()
 }
 
 @Composable
 fun CreateGameScreenDataContent(
-    scaffoldPadding: PaddingValues,
     loadedState: ScreenState.Loaded,
     onPrimaryBtnClick: (InitialGameData) -> Unit,
+    colorProvider: ColorProvider,
 ) {
-    val colorsList = tileColors
-    val isTileSelected: (tileValue: Int, pickedValue: PickedValue) -> Boolean = remember {
-        { tileValue, pickedValue ->
-            pickedValue.floatValue >= tileValue
-        }
-    }
+    val dimens = createGameDimens
 
     // Tiles states
     val numberOfTilesState = rememberSaveable(
+        loadedState.tileCountRowData.initialCount,
         saver = PickedValueSaver
     ) {
         mutableStateOf(
             PickedValue(
-                floatValue = loadedState.savedInitialGameData.tilesCount.toFloat(),
+                floatValue = loadedState.tileCountRowData.initialCount.toFloat(),
                 source = PickedValueSource.Init,
             )
         )
@@ -158,18 +154,20 @@ fun CreateGameScreenDataContent(
         mutableStateOf(IntSize.Zero)
     }
 
-    val tilesValues = remember {
-        loadedState.tilesValueRange.toPersistentList()
+    val tilesValues = remember(loadedState.tileCountRowData.maxCount) {
+        List(loadedState.tileCountRowData.maxCount) { index ->
+            index + 1
+        }.toPersistentList()
     }
-
 
     // Color states
     val numberOfColorsState = rememberSaveable(
+        loadedState.fillCountRowData.initialCount,
         saver = PickedValueSaver
     ) {
         mutableStateOf(
             PickedValue(
-                floatValue = loadedState.savedInitialGameData.colorsCount.toFloat(),
+                floatValue = loadedState.fillCountRowData.initialCount.toFloat(),
                 source = PickedValueSource.Init,
             )
         )
@@ -187,8 +185,10 @@ fun CreateGameScreenDataContent(
         mutableStateOf(IntSize.Zero)
     }
 
-    val colorsValues = remember {
-        loadedState.colorsValueRange.toPersistentList()
+    val colorsValues = remember(loadedState.fillCountRowData.maxCount) {
+        List(loadedState.fillCountRowData.maxCount) { index ->
+            index + 1
+        }.toPersistentList()
     }
 
     // Parent states
@@ -244,7 +244,6 @@ fun CreateGameScreenDataContent(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(scaffoldPadding)
                 .padding(screenDimens.screenContentPadding)
         ) {
 
@@ -278,22 +277,40 @@ fun CreateGameScreenDataContent(
                             .zIndex(2f),
                     )
 
-                    com.jozeftvrdy.game.guessorder.extension.Spacer(24)
+                    com.jozeftvrdy.game.guessorder.extension.Spacer(12)
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState())
+                    ) {
+                        com.jozeftvrdy.game.guessorder.extension.Spacer(12)
 
-                    TilesRow(
-                        numberOfTilesState,
-                        pickedValueRange = loadedState.tilesValueRange,
-                        getColor = remember { { null } },
-                        getIsSelected = isTileSelected,
-                        onTileClick = remember(numberOfTilesState) {
-                            { tileValue ->
-                                numberOfTilesState.value = PickedValue(
-                                    tileValue.toFloat(),
-                                    PickedValueSource.TileClick
-                                )
-                            }
-                        }
-                    )
+                        TilesRowWithProgress(
+                            tilesCount = loadedState.tileCountRowData.maxCount,
+                            dimens.tileSize,
+                            numberOfTilesState,
+                            getIsSelected = remember {
+                                { index ->
+                                    val isSelected by derivedStateOf {
+                                        numberOfTilesState.value.floatValue >= index + 1
+                                    }
+                                    isSelected
+                                }
+                            },
+                            getIsEnabled = remember(loadedState.tileCountRowData.selectableRange) {{ index ->
+                                loadedState.tileCountRowData.selectableRange.contains(index + 1)
+                            }},
+                            onTileClick = remember(numberOfTilesState, (loadedState.tileCountRowData.selectableRange)) {
+                                { index ->
+                                    numberOfTilesState.value = PickedValue(
+                                        (index + 1).coerceIn(loadedState.tileCountRowData.selectableRange).toFloat(),
+                                        PickedValueSource.TileClick
+                                    )
+                                }
+                            },
+                            getTileItemContent = remember { { { } } },
+                        )
+
+                        com.jozeftvrdy.game.guessorder.extension.Spacer(12)
+                    }
                 }
                 Spacer(modifier = Modifier.weight(0.2f))
 
@@ -316,26 +333,54 @@ fun CreateGameScreenDataContent(
                             .zIndex(2f),
                     )
 
-                    com.jozeftvrdy.game.guessorder.extension.Spacer(24)
+                    com.jozeftvrdy.game.guessorder.extension.Spacer(12)
+                    Row(
+                        modifier = Modifier
+                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        com.jozeftvrdy.game.guessorder.extension.Spacer(12)
 
-                    TilesRow(
-                        numberOfColorsState,
-                        pickedValueRange = loadedState.colorsValueRange,
-                        getColor = remember(loadedState, colorsList) {
-                            {
-                                colorsList[it]
+                        TilesRowWithProgress(
+                            tilesCount = loadedState.fillCountRowData.maxCount,
+                            tileSize = dimens.tileSize,
+                            numberOfColorsState,
+                            getIsSelected = remember {
+                                { index ->
+                                    val isSelected by derivedStateOf {
+                                        numberOfColorsState.value.floatValue >= (index + 1)
+                                    }
+                                    isSelected
+                                }
+                            },
+                            getIsEnabled = remember(loadedState.fillCountRowData.selectableRange) {
+                                { index ->
+                                    loadedState.fillCountRowData.selectableRange.contains(index + 1)
+                                }
+                            },
+                            onTileClick = remember(numberOfColorsState, loadedState.fillCountRowData.selectableRange) {
+                                { index ->
+                                    numberOfColorsState.value = PickedValue(
+                                        (index + 1).coerceIn(loadedState.fillCountRowData.selectableRange).toFloat(),
+                                        PickedValueSource.TileClick
+                                    )
+                                }
+                            },
+                            getTileItemContent = remember(loadedState.fills, colorProvider) {
+                                { index ->
+                                    val fill = loadedState.fills[index]
+                                    {
+                                        val isDarkTheme = isSystemInDarkTheme()
+                                        val color = colorProvider.provideColorValue(fill, isDarkTheme)
+
+                                        TileFill(
+                                            color = color
+                                        )
+                                    }
+                                }
                             }
-                        },
-                        getIsSelected = isTileSelected,
-                        onTileClick = remember(numberOfColorsState) {
-                            {
-                                numberOfColorsState.value = PickedValue(
-                                    it.toFloat(),
-                                    PickedValueSource.TileClick
-                                )
-                            }
-                        }
-                    )
+                        )
+                        com.jozeftvrdy.game.guessorder.extension.Spacer(12)
+                    }
                 }
                 Spacer(modifier = Modifier.weight(0.2f))
 
@@ -379,6 +424,6 @@ private fun ConfirmButton(
         onClick = onClick,
         elevation = null,
     ) {
-        Text("Create")
+        Text(stringResource(R.string.create_game_screen_main_button))
     }
 }

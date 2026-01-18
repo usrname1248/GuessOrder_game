@@ -9,12 +9,14 @@ import org.koin.dsl.module
 val viewModelModule = module {
     viewModel {
         CreateGameScreenViewModel(
+            savedStateHandle = get(),
             gameRepo = get()
         )
     }
 
     viewModel { (initialGameData: InitialGameData) ->
         PlayGameViewModel(
+            savedStateHandle = get(),
             initialGameData = initialGameData,
             playRepo = get()
         )

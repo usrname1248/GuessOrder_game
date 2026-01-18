@@ -1,17 +1,20 @@
 package com.jozeftvrdy.game.guessorder.repository
 
+import com.jozeftvrdy.game.guessorder.game.model.InitialGameData
+import com.jozeftvrdy.game.guessorder.game.model.ItemFill
 import com.jozeftvrdy.game.guessorder.game.model.Result
 import com.jozeftvrdy.game.guessorder.game.model.TurnResult
 import com.jozeftvrdy.game.guessorder.game.model.failureResult
 import com.jozeftvrdy.game.guessorder.game.model.successResult
 import kotlin.math.min
+import kotlin.random.Random
 
 class PlayGameRepositoryImpl : PlayGameRepository {
     override fun validateTurnGuess(
-        turnGuess: List<Long>,
-        solution: List<Long>
+        turnGuess: List<ItemFill>,
+        solution: List<ItemFill>
     ): Result<TurnResult> {
-        fun MutableMap<Long, Int>.increaseCountFor(value: Long) {
+        fun MutableMap<ItemFill, Int>.increaseCountFor(value: ItemFill) {
             val oldValue = this[value]?:0
             this[value] = oldValue + 1
         }
@@ -25,8 +28,8 @@ class PlayGameRepositoryImpl : PlayGameRepository {
         }
 
         var greatSuccessCount = 0
-        val solutionValuesCountOnDiffPlaces = mutableMapOf<Long, Int>()
-        val guessValuesCountOnDiffPlaces = mutableMapOf<Long, Int>()
+        val solutionValuesCountOnDiffPlaces = mutableMapOf<ItemFill, Int>()
+        val guessValuesCountOnDiffPlaces = mutableMapOf<ItemFill, Int>()
 
         for (index in turnGuess.indices) {
             val guessValue = turnGuess[index]
@@ -53,5 +56,18 @@ class PlayGameRepositoryImpl : PlayGameRepository {
             greatSuccessCount = greatSuccessCount,
             mildSuccessCount = mildSuccessCount
         ).successResult()
+    }
+
+    override fun generateSolution(turnGuess: List<ItemFill>, gameData: InitialGameData): List<ItemFill> {
+        val entries = ItemFill.entries
+        lateinit var solution: List<ItemFill>
+        do {
+            solution = turnGuess.map {
+                entries[Random.nextInt(gameData.colorsCount)]
+            }
+        } while (turnGuess == solution)
+        require(solution.isNotEmpty())
+        require(solution.size == turnGuess.size)
+        return solution
     }
 }

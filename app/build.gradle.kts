@@ -1,7 +1,10 @@
+import org.jetbrains.kotlin.compose.compiler.gradle.ComposeFeatureFlag
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.jetbrains.kotlin.serialization)
 }
 
@@ -34,6 +37,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
+    composeCompiler {
+        featureFlags = setOf(ComposeFeatureFlag.StrongSkipping.disabled())
+    }
     kotlinOptions {
         jvmTarget = "11"
     }
@@ -62,10 +69,10 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.core)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.immutable)
-    implementation(libs.koin.android)
-    implementation(libs.koin.androidx.compose)
-    implementation(libs.koin.core)
+    implementation(libs.koin.compose)
+    implementation(libs.koin.compose.navigation3)
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotest.assertions)

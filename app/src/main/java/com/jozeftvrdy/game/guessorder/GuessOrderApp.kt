@@ -4,6 +4,7 @@ import android.app.Application
 import com.jozeftvrdy.game.database.di.databaseDiModule
 import com.jozeftvrdy.game.guessorder.di.activityModule
 import com.jozeftvrdy.game.guessorder.di.appModule
+import com.jozeftvrdy.game.guessorder.di.navigationModule
 import com.jozeftvrdy.game.guessorder.di.viewModelModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -16,7 +17,7 @@ class GuessOrderApp: Application() {
         startKoin {
             androidLogger()
             androidContext(this@GuessOrderApp)
-            modules(appModule, activityModule, viewModelModule, databaseDiModule)
+            modules(appModule, navigationModule, activityModule, viewModelModule, databaseDiModule)
         }
     }
 }

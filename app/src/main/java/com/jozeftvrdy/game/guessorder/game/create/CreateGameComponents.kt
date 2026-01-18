@@ -17,22 +17,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.rememberScrollableState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.scrollableArea
 import androidx.compose.foundation.shape.CircleShape
@@ -43,8 +40,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -54,6 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -62,13 +58,16 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.jozeftvrdy.game.guessorder.extension.Spacer
 import com.jozeftvrdy.game.guessorder.extension.ifNotNull
-import com.jozeftvrdy.game.guessorder.ui.dimens.CreateGameDimens
-import com.jozeftvrdy.game.guessorder.ui.dimens.createGameDimens
+import com.jozeftvrdy.game.guessorder.extension.mixWith
 import com.jozeftvrdy.game.guessorder.ui.theme.GuessOrderGameTheme
 import com.jozeftvrdy.game.guessorder.ui.theme.ThemePreview
 import kotlinx.collections.immutable.ImmutableList
@@ -78,181 +77,200 @@ import kotlinx.coroutines.launch
 import kotlin.math.min
 import kotlin.math.roundToInt
 
+typealias TileComposableContent = @Composable BoxScope.() -> Unit
+
 @Composable
-fun TilesRow(
+fun TilesRowWithProgress(
+    tilesCount: Int,
+    tileSize: Dp,
     pickedValueState: MutableState<PickedValue>,
-    pickedValueRange: IntRange,
-    getColor: @Composable (index: Int) -> Color?,
-    getIsSelected: (tileValue: Int, pickedValue: PickedValue) -> Boolean,
-    onTileClick: (tileValue: Int) -> Unit,
+    getIsSelected: @Composable (index: Int) -> Boolean,
+    onTileClick: ((index: Int) -> Unit)?,
     modifier: Modifier = Modifier,
+    getIsEnabled: @Composable (index: Int) -> Boolean = remember{{ true }},
+    getTileItemContent: (index: Int) -> TileComposableContent
 ) {
-    val dimens = createGameDimens
     val selectedColor = MaterialTheme.colorScheme.secondary
     val unselectedColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.75f)
-    val tileSpacerWeight = 0.15f
 
     Box(
         modifier = modifier
-            .height(intrinsicSize = IntrinsicSize.Min)
+            .tileProgress(
+                pickedValueState = pickedValueState,
+                maxValue = tilesCount.toFloat(),
+                selectedColor = selectedColor,
+                unselectedColor = unselectedColor,
+                heightFraction = 0.15f,
+                padding = PaddingValues(horizontal = tileSize.div(2))
+            )
     ) {
-        TileProgress(
-            pickedValueState = pickedValueState,
-            maxValue = pickedValueRange.last,
+        TilesRow(
+            count = tilesCount,
+            tileSize = tileSize,
             selectedColor = selectedColor,
             unselectedColor = unselectedColor,
-            modifier = Modifier
-                .zIndex(1f)
-                .fillMaxWidth(fraction = run {
-                    val tilesCount = pickedValueRange.last
-                    val totalWeight = tilesCount + tilesCount.minus(1).times(tileSpacerWeight)
-                    val desiredWeight = totalWeight - 1
-                    desiredWeight.div(totalWeight)
-                })
-                .fillMaxHeight(0.15f)
-                .align(Alignment.Center)
-        )
-
-        ImmutableTilesRow(
-            pickedValueRange = pickedValueRange,
-            getColor = getColor,
-            selectedColor = selectedColor,
-            unselectedColor = unselectedColor,
-            getIsSelectedState = { index, value ->
-                if (value < pickedValueRange.first) {
-                    remember(index) {
-                        mutableStateOf(true)
-                    }
-                } else if (value > pickedValueRange.last) {
-                    remember(index) {
-                        mutableStateOf(false)
-                    }
-                } else {
-                    remember(index) {
-                        derivedStateOf {
-                            getIsSelected(value, pickedValueState.value)
-                        }
-                    }
-                }
-            },
+            getIsSelected = getIsSelected,
+            getIsEnabled = getIsEnabled,
             onTileClick = onTileClick,
             betweenItemsSpacer = remember {
                 {
-                    Spacer(modifier = Modifier.weight(tileSpacerWeight))
+                    Spacer(12)
                 }
             },
-            dimens = dimens,
-            modifier = Modifier.zIndex(2f)
+            modifier = Modifier
+                .zIndex(2f)
+            ,
+            getTileItemContent = getTileItemContent
         )
-
     }
 }
 
 @Composable
-fun ImmutableTilesRow(
-    pickedValueRange: IntRange,
-    getColor: @Composable (index: Int) -> Color?,
-    getIsSelectedState: @Composable (index:Int, tileValue: Int) -> State<Boolean>,
-    selectedColor: Color,
-    unselectedColor: Color,
-    onTileClick: ((tileValue: Int) -> Unit)?,
+fun TilesRow(
+    count: Int,
+    tileSize: Dp,
+    getIsSelected: @Composable (index: Int) -> Boolean,
+    onTileClick: ((index: Int) -> Unit)?,
     modifier: Modifier = Modifier,
-    dimens: CreateGameDimens = createGameDimens,
-    betweenItemsSpacer: @Composable RowScope.() -> Unit = {}
+    getIsEnabled: @Composable (index: Int) -> Boolean = remember{{false}},
+    selectedColor: Color = MaterialTheme.colorScheme.secondary,
+    unselectedColor: Color = MaterialTheme.colorScheme.outline.copy(alpha = 0.75f),
+    betweenItemsSpacer: @Composable RowScope.() -> Unit = {},
+    getTileItemContent: (index: Int) -> TileComposableContent,
 ) {
     Row(
-        modifier = modifier
+        modifier = modifier,
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-
-        (1..pickedValueRange.last).forEachIndexed { index, value ->
+        repeat(count) { index ->
             if (index > 0) {
                 betweenItemsSpacer()
             }
 
-            Tile(
-                modifier = Modifier
-                    .weight(1f, fill = false)
-                    .widthIn(min = dimens.minTileSize, max = dimens.maxTileSize)
-                    .aspectRatio(1f),
-                tileColor = getColor(index),
-                isSelectedState = getIsSelectedState(index, value),
+            InternalTile(
+                index = index,
+                size = tileSize,
+                getIsSelected = getIsSelected,
+                getIsEnabled = getIsEnabled,
                 selectedColor = selectedColor,
                 unselectedColor = unselectedColor,
-                onTileClick = onTileClick?.let {
-                    remember(value, pickedValueRange) {
-                        {
-                            onTileClick.invoke(value.coerceIn(pickedValueRange))
-                        }
-                    }
-                }
+                onTileClick = onTileClick,
+                getTileItemContent = getTileItemContent
             )
         }
     }
 }
 
 @Composable
-fun TileProgress(
-    pickedValueState: MutableState<PickedValue>,
-    maxValue: Int,
-    selectedColor: Color,
-    unselectedColor: Color,
-    modifier: Modifier = Modifier,
+fun InternalTile(
+    index: Int,
+    size: Dp,
+    getIsSelected: @Composable (index: Int) -> Boolean,
+    onTileClick: ((index: Int) -> Unit)?,
+    getIsEnabled: @Composable (index: Int) -> Boolean = remember{{false}},
+    selectedColor: Color = MaterialTheme.colorScheme.secondary,
+    unselectedColor: Color = MaterialTheme.colorScheme.outline.copy(alpha = 0.75f),
+    getTileItemContent: (index: Int) -> TileComposableContent,
 ) {
-    Box(
-        modifier = modifier
-            .drawBehind {
-                drawRect(
-                    color = unselectedColor,
-                )
+    Tile(
+        modifier = Modifier
+            .size(size),
+        isSelected = getIsSelected(index),
+        isEnabled = getIsEnabled(index),
+        selectedColor = selectedColor,
+        unselectedColor = unselectedColor,
+        onTileClick = onTileClick?.let {
+            remember(index) {
+                {
+                    onTileClick.invoke(index)
+                }
             }
-            .drawBehind {
-                drawRect(
-                    color = selectedColor,
-                    size = this.size.copy(
-                        width = this.size.width
-                            .times(
-                                pickedValueState.value.floatValue - 1
-                            )
-                            .div(
-                                maxValue - 1
-                            )
-                    )
-                )
-            }
+        },
+        content = remember(index) {
+            getTileItemContent(index)
+        }
     )
 }
+
+@Composable
+fun Modifier.tileProgress(
+    pickedValueState: MutableState<PickedValue>,
+    maxValue: Float,
+    selectedColor: Color,
+    unselectedColor: Color,
+    heightFraction: Float,
+    layoutDirection: LayoutDirection = LocalLayoutDirection.current,
+    padding: PaddingValues = PaddingValues(),
+) = this.drawBehind {
+        var progressRect = Rect(Offset.Zero, size)
+
+        with(progressRect) {
+            if (padding != PaddingValues()) {
+                progressRect = Rect(
+                    top = top + padding.calculateTopPadding().toPx(),
+                    bottom = bottom - padding.calculateTopPadding().toPx(),
+                    left = left + padding.calculateLeftPadding(layoutDirection).toPx(),
+                    right = right - padding.calculateRightPadding(layoutDirection).toPx(),
+                )
+            }
+        }
+
+        with(progressRect) {
+            val totalHeight = this.size.height
+            val desiredHeight = totalHeight.times(heightFraction)
+            val topBottomPadding = (totalHeight - desiredHeight) / 2
+            progressRect = Rect(
+                left = left,
+                top = top + topBottomPadding,
+                right = right,
+                bottom = bottom - topBottomPadding,
+            )
+        }
+
+        drawRect(
+            topLeft = progressRect.topLeft,
+            size = progressRect.size,
+            color = unselectedColor,
+        )
+
+        with(progressRect) {
+            val width = right - left
+            val newWidth = width.times(
+                pickedValueState.value.floatValue - 1
+            )
+                .div(
+                    maxValue - 1
+                )
+
+            progressRect = progressRect.copy(
+                right = left + newWidth
+            )
+        }
+
+        drawRect(
+            topLeft = progressRect.topLeft,
+            size = progressRect.size,
+            color = selectedColor,
+        )
+
+    }
 
 @Composable
 fun Tile(
-    tileColor: Color?,
-    isSelectedState: State<Boolean>,
-    selectedColor: Color,
-    unselectedColor: Color,
-    modifier: Modifier = Modifier,
-    onTileClick: (() -> Unit)? = null,
-) {
-    TileStateless(
-        tileColor = tileColor,
-        isSelected = isSelectedState.value,
-        selectedColor = selectedColor,
-        unselectedColor = unselectedColor,
-        modifier = modifier,
-        onTileClick = onTileClick
-    )
-}
-
-@Composable
-fun TileStateless(
-    tileColor: Color?,
     isSelected: Boolean,
     selectedColor: Color,
     unselectedColor: Color,
     modifier: Modifier = Modifier,
+    isEnabled: Boolean = false,
     onTileClick: (() -> Unit)? = null,
+    content: TileComposableContent,
 ) {
     val animationDurationMillis = 440
     val dimens = createGameDimens
     val shape = MaterialTheme.shapes.large
+    val disabledColorComposite = Color.Gray
+    val backgroundColor = MaterialTheme.colorScheme.primaryContainer
 
     val transition = updateTransition(isSelected)
 
@@ -283,27 +301,44 @@ fun TileStateless(
         modifier = modifier
             .shadow(elevation = 6.dp, shape = shape)
             .clip(shape)
-            .background(MaterialTheme.colorScheme.primaryContainer, shape = shape)
+            .background(
+                if (isEnabled) {
+                    backgroundColor
+                } else {
+                    backgroundColor.mixWith(disabledColorComposite)
+                },
+                shape = shape
+            )
             .border(
                 width = animatedBorderWidthState.value,
-                color = animatedBorderColorState.value,
+                color = if (isEnabled) {
+                    animatedBorderColorState.value
+                } else {
+                    animatedBorderColorState.value.mixWith(disabledColorComposite)
+                },
                 shape = shape
             )
             .ifNotNull(onTileClick) {
                 Modifier.clickable(onClick = it)
             },
         contentAlignment = Alignment.Center,
-    ) {
-        if (tileColor != null) {
-            Surface(
-                shape = CircleShape,
-                color = tileColor,
-                modifier = Modifier
-                    .fillMaxSize(0.75f)
-            ) {
+        content = content
+    )
+}
 
-            }
-        }
+@Composable
+fun TileFill(
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        shape = CircleShape,
+        color = color,
+        modifier = Modifier
+            .fillMaxSize(0.75f)
+            .then(modifier)
+    ) {
+
     }
 }
 
@@ -443,9 +478,9 @@ fun Counter(
                 enabled = false
             )
     ) {
-        repeat(items.size) {
+        repeat(items.size) { index ->
             CounterItem(
-                items[it].toString()
+                items[index].toString(10)
             )
         }
     }
@@ -485,7 +520,7 @@ fun CounterOverlay(
     LaunchedEffect(pickedValueState.value.floatValue, topAdditionalSize, emptyItemsCount) {
         val intY = (
                 (pickedValueState.value.floatValue + emptyItemsCount)
-                    .minus(items.first())
+                    .minus(1)
                     .times(singleTilePixelSize) - topAdditionalSize).roundToInt()
         launch {
             fakeScrollState.scrollTo(intY)
@@ -554,7 +589,7 @@ fun CounterOverlay(
                 }
                 repeat(items.size) {
                     CounterItem(
-                        items[it].toString()
+                        items[it].toString(10)
                     )
                 }
                 repeat(emptyItemsCount) {
@@ -597,13 +632,14 @@ private fun CounterItem(
 @Composable
 fun EmptyTilePreview() {
     GuessOrderGameTheme {
-        TileStateless(
-            tileColor = null,
+        Tile(
             isSelected = false,
             selectedColor = Color.Blue,
             unselectedColor = Color.Blue.copy(0.6f),
-            modifier = Modifier.padding(16.dp),
-        )
+            modifier = Modifier.padding(16.dp).size(48.dp),
+        ) {
+
+        }
     }
 }
 
@@ -611,13 +647,14 @@ fun EmptyTilePreview() {
 @Composable
 fun SelectedTilePreview() {
     GuessOrderGameTheme {
-        TileStateless(
-            tileColor = null,
+        Tile(
             isSelected = true,
             selectedColor = Color.Blue,
             unselectedColor = Color.Blue.copy(0.6f),
-            modifier = Modifier.padding(16.dp),
-        )
+            modifier = Modifier.padding(16.dp).size(48.dp),
+        ) {
+
+        }
     }
 }
 
@@ -625,13 +662,16 @@ fun SelectedTilePreview() {
 @Composable
 fun FilledTilePreview() {
     GuessOrderGameTheme {
-        TileStateless(
-            tileColor = Color.Red,
+        Tile(
             isSelected = false,
             selectedColor = Color.Blue,
             unselectedColor = Color.Blue.copy(0.6f),
-            modifier = Modifier.padding(16.dp),
-        )
+            modifier = Modifier.padding(16.dp).size(48.dp),
+        ) {
+            TileFill(
+                color = Color.Red
+            )
+        }
     }
 }
 

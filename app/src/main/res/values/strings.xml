@@ -11,5 +11,11 @@
         <item quantity="one">%d correct color, but on incorrect place</item>
         <item quantity="other">%d correct colors, but on incorrect places</item>
     </plurals>
+    <string name="loading_result_description">Results are being calculated</string>
     <string name="mild_success_icon_description">Correct color, but on incorrect place</string>
+    <string name="empty_tiles_confirmed_message">Please complete all tiles, before guessing.</string>
+    <string name="unexpected_error_message">There has been an unexpected error</string>
+    <string name="play_game_screen_main_button">Confirm Guess</string>
+    <string name="play_game_screen_secondary_button_reset">Reset Guess</string>
+    <string name="create_game_screen_main_button">Create</string>
 </resources>

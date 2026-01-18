@@ -4,6 +4,8 @@ import com.jozeftvrdy.game.guessorder.repository.GameRepository
 import com.jozeftvrdy.game.guessorder.repository.GameRepositoryImpl
 import com.jozeftvrdy.game.guessorder.repository.PlayGameRepository
 import com.jozeftvrdy.game.guessorder.repository.PlayGameRepositoryImpl
+import com.jozeftvrdy.game.guessorder.ui.provider.ColorProvider
+import com.jozeftvrdy.game.guessorder.ui.provider.DefaultColorProvider
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import org.koin.dsl.module
@@ -18,6 +20,10 @@ val appModule = module {
 
     factory<PlayGameRepository> {
         PlayGameRepositoryImpl()
+    }
+
+    single<ColorProvider> {
+        DefaultColorProvider()
     }
 
     single<AppDispatchers> {

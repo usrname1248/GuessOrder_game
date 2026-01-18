@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -11,10 +12,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.jozeftvrdy.game.guessorder.game.model.BackStackHolder
+import com.jozeftvrdy.game.guessorder.navigation.CreateGameNavScreen
 import com.jozeftvrdy.game.guessorder.navigation.NavigationRoot
 import com.jozeftvrdy.game.guessorder.ui.theme.GuessOrderGameTheme
+import org.koin.android.ext.android.inject
+import org.koin.core.parameter.parametersOf
 
 class MainActivity : ComponentActivity() {
+
+    val backStackHolder: BackStackHolder by inject {
+        parametersOf(
+            CreateGameNavScreen
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -24,7 +36,9 @@ class MainActivity : ComponentActivity() {
                     NavigationRoot(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(innerPadding)
+                            .displayCutoutPadding()
+                            .padding(innerPadding),
+                        backStackHolder,
                     )
                 }
             }
