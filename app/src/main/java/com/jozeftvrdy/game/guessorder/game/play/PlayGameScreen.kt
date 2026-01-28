@@ -212,7 +212,7 @@ private fun PlayingAreaContent(
 
         val scrollState = rememberScrollState()
         ScrollableContentIndication(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f, fill = false),
             scrollOrientation = Orientation.Horizontal,
             scrollState = scrollState,
             backgroundColor = bgColor,

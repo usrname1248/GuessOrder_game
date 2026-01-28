@@ -38,6 +38,14 @@ class PlayGameViewModel(
         mutableStateListOf(*emptyArray)
     }
 
+    var savedSolution: List<ItemFill>?
+        get() {
+            return savedStateHandle[savedStateSolutionKey]
+        }
+        set(value) {
+            savedStateHandle[savedStateSolutionKey] = value
+        }
+
     override val initialState: ScreenState
         get() = ScreenState(
             persistentListOf(),
@@ -77,12 +85,12 @@ class PlayGameViewModel(
         }
 
         viewModelScope.launch {
-            val solution = savedStateHandle[savedStateSolutionKey]?:run {
+            val solution = savedSolution?:run {
                 playRepo.generateSolution(
                     turnGuess = guess,
                     gameData = initialGameData
                 ).also {
-                    savedStateHandle[savedStateSolutionKey] = it
+                    savedSolution = it
                 }
             }
 
@@ -95,11 +103,6 @@ class PlayGameViewModel(
                 )
                 return@launch
             }.let { result ->
-                if (result.greatSuccessCount == guess.size) {
-                    sendEffect(ScreenEffect.NavigateToPostGame)
-                    return@launch
-                }
-
                 requireNotNull(index)
                 updateState { oldState ->
                     oldState.copy(
@@ -111,7 +114,17 @@ class PlayGameViewModel(
                         }
                     )
                 }
+
+                if (result.greatSuccessCount == guess.size) {
+                    sendEffect(ScreenEffect.NavigateToPostGame)
+                    clearSavedValues()
+                }
             }
+        }
+    }
+
+    fun clearSavedValues() {
+        viewModelScope.launch {
         }
     }
 }

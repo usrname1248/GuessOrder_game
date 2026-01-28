@@ -1,16 +1,19 @@
 package com.jozeftvrdy.game.guessorder.di
 
 import androidx.navigation3.runtime.NavKey
+import com.jozeftvrdy.game.guessorder.game.SuccessGameScreen
 import com.jozeftvrdy.game.guessorder.game.create.CreateGameScreen
 import com.jozeftvrdy.game.guessorder.game.model.BackStackHolder
 import com.jozeftvrdy.game.guessorder.game.play.PlayGameScreen
 import com.jozeftvrdy.game.guessorder.navigation.CreateGameNavScreen
 import com.jozeftvrdy.game.guessorder.navigation.GameNavScreen
+import com.jozeftvrdy.game.guessorder.navigation.SuccessGameNavScreen
 import org.koin.core.annotation.KoinExperimentalAPI
 import org.koin.dsl.module
 import org.koin.dsl.navigation3.navigation
+import kotlin.uuid.ExperimentalUuidApi
 
-@OptIn(KoinExperimentalAPI::class)
+@OptIn(KoinExperimentalAPI::class, ExperimentalUuidApi::class)
 val navigationModule = module {
 
     single { (startDestination: NavKey) ->
@@ -20,7 +23,11 @@ val navigationModule = module {
     navigation<CreateGameNavScreen> {
         CreateGameScreen(
             onPrimaryBtnClick = {
-                get<BackStackHolder>().goTo(GameNavScreen(it))
+                get<BackStackHolder>().goTo(
+                    GameNavScreen(
+                        initData = it,
+                    ),
+                )
             }
         )
     }
@@ -29,7 +36,30 @@ val navigationModule = module {
         PlayGameScreen(
             initialGameData = route.initData,
             onGameFinish = {
-                get<BackStackHolder>().goBack()
+                get<BackStackHolder>().goTo(SuccessGameNavScreen(
+                    route.initData
+                ))
+            }
+        )
+    }
+
+    navigation<SuccessGameNavScreen> { route ->
+        SuccessGameScreen(
+            initialGameData = route.usedData,
+            navigateToMainGameScreen = { usedData ->
+                get<BackStackHolder>().apply {
+                    removeLastUntil { backstack ->
+                        backstack.last() is CreateGameNavScreen
+                    }
+                    goTo(GameNavScreen(usedData))
+                }
+            },
+            navigateToCreateGameScreen = {
+                get<BackStackHolder>().apply {
+                    removeLastUntil { backstack ->
+                        backstack.last() is CreateGameNavScreen
+                    }
+                }
             }
         )
     }

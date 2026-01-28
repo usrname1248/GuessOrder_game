@@ -11,13 +11,22 @@ import com.jozeftvrdy.game.guessorder.game.model.InitialGameData
 import kotlinx.serialization.Serializable
 import org.koin.compose.navigation3.koinEntryProvider
 import org.koin.core.annotation.KoinExperimentalAPI
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Serializable
 data object CreateGameNavScreen : NavKey
 
+@OptIn(ExperimentalUuidApi::class)
 @Serializable
 data class GameNavScreen(
-    val initData: InitialGameData
+    val initData: InitialGameData,
+    val gameId: Uuid = Uuid.random()
+): NavKey
+
+@Serializable
+data class SuccessGameNavScreen(
+    val usedData: InitialGameData
 ): NavKey
 
 @OptIn(KoinExperimentalAPI::class)
@@ -28,13 +37,13 @@ fun NavigationRoot(
 ) {
     NavDisplay(
         modifier = modifier,
-        backStack = backStackHolder.backStack,
+        backStack = backStackHolder.backstack,
         onBack = {
             backStackHolder.goBack()
         },
         entryDecorators = listOf(
             rememberSaveableStateHolderNavEntryDecorator(),
-            rememberViewModelStoreNavEntryDecorator()
+            rememberViewModelStoreNavEntryDecorator(),
         ),
         entryProvider = koinEntryProvider()
     )
