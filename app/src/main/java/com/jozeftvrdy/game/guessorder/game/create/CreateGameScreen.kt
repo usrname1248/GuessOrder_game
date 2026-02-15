@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -373,6 +374,7 @@ fun CreateGameScreenDataContent(
                                         val color = colorProvider.provideColorValue(fill, isDarkTheme)
 
                                         TileFill(
+                                            modifier = Modifier.size(dimens.tileSize.times(TileFillFraction)),
                                             color = color
                                         )
                                     }

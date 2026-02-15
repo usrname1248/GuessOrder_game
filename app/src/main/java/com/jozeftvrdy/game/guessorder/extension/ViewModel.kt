@@ -21,6 +21,13 @@ fun <T: Any> ViewModel.rememberFunction(function: (T) -> Unit) : (T) -> Unit {
     }
 }
 
+@Composable
+fun <T: Any, U: Any> ViewModel.rememberFunction(function: (T, U?) -> Unit) : (T, U?) -> Unit {
+    return remember(this) {
+        function
+    }
+}
+
 @SuppressLint("ComposableNaming")
 @Composable
 fun <T> listenToEffects(effectFlow: Flow<T>, onEffect: (T) -> Unit) {

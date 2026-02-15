@@ -12,7 +12,7 @@ data class PlayGameDimens (
     val historyTileSize: Dp,
     val historyRowOuterPadding: PaddingValues,
     val historyResultIconSize: Dp = playTileSize.times(0.75f),
-    val historyResultTextSize: TextUnit = playTileSize.value.times(0.66f).sp,
+    val historyResultTextSize: TextUnit = playTileSize.value.times(0.55f).sp,
     val historyResultProgressSize: Dp = playTileSize.times(0.8f),
 )
 

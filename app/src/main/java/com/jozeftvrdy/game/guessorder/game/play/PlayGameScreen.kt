@@ -4,6 +4,12 @@ import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.draganddrop.DragAndDropSourceScope
 import androidx.compose.foundation.draganddrop.dragAndDropSource
@@ -18,6 +24,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -25,6 +32,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -49,13 +57,17 @@ import com.jozeftvrdy.game.guessorder.extension.Spacer
 import com.jozeftvrdy.game.guessorder.extension.listenToEffects
 import com.jozeftvrdy.game.guessorder.extension.rememberFunction
 import com.jozeftvrdy.game.guessorder.game.create.TileFill
+import com.jozeftvrdy.game.guessorder.game.create.TileFillFraction
 import com.jozeftvrdy.game.guessorder.game.create.TilesRow
 import com.jozeftvrdy.game.guessorder.game.model.InitialGameData
 import com.jozeftvrdy.game.guessorder.game.model.ItemFill
+import com.jozeftvrdy.game.guessorder.game.model.TurnResult
 import com.jozeftvrdy.game.guessorder.ui.components.ScrollableContentIndication
 import com.jozeftvrdy.game.guessorder.ui.provider.ColorProvider
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -90,7 +102,8 @@ fun PlayGameScreen(
                 viewModel.currentGuess
             }
         },
-        onMainBtnClicked = viewModel.rememberFunction(viewModel::eventOnButtonClicked)
+        onMainBtnClicked = viewModel.rememberFunction(viewModel::eventOnButtonClicked),
+        onCurrentGuessModify = viewModel.rememberFunction(viewModel::eventOnGuessModify)
     )
 }
 
@@ -98,7 +111,8 @@ fun PlayGameScreen(
 fun PlayGameContent(
     state: ScreenState,
     getColor: (ItemFill, isDarkTheme: Boolean) -> Color,
-    getCurrentGuess: () -> MutableList<ItemFill?>,
+    getCurrentGuess: () -> List<ItemFill?>,
+    onCurrentGuessModify: (Int, ItemFill?) -> Unit,
     onMainBtnClicked: () -> Unit,
 ) {
     Column(
@@ -117,6 +131,7 @@ fun PlayGameContent(
             initialGameData = state.initialGameData,
             getColor = getColor,
             getCurrentGuess = getCurrentGuess,
+            onCurrentGuessModify = onCurrentGuessModify,
             onMainBtnClicked = onMainBtnClicked,
         )
     }
@@ -128,9 +143,21 @@ private fun HistoryComponent(
     historyItems: HistoryItems,
     getColor: (ItemFill, isDarkTheme: Boolean) -> Color,
 ) {
+    val scrollState = rememberScrollState()
+
+    LaunchedEffect(
+        historyItems
+    ) {
+        scrollState.animateScrollTo(
+            scrollState.maxValue,
+            animationSpec = tween(200, delayMillis = 50, easing = LinearOutSlowInEasing)
+        )
+    }
+
     Column(
         modifier = modifier
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(scrollState),
+        verticalArrangement = Arrangement.Bottom,
     ) {
         repeat(historyItems.size) { index ->
             HistoryItem(
@@ -145,7 +172,8 @@ private fun HistoryComponent(
 private fun PlayingAreaComponent(
     initialGameData: InitialGameData,
     getColor: (ItemFill, isDarkTheme: Boolean) -> Color,
-    getCurrentGuess: () -> MutableList<ItemFill?>,
+    getCurrentGuess: () -> List<ItemFill?>,
+    onCurrentGuessModify: (Int, ItemFill?) -> Unit,
     onMainBtnClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -157,6 +185,7 @@ private fun PlayingAreaComponent(
             bgColor = bgColor,
             getColor = getColor,
             getCurrentGuess = getCurrentGuess,
+            onCurrentGuessModify = onCurrentGuessModify,
             onMainBtnClicked = onMainBtnClicked,
         )
     }
@@ -168,7 +197,8 @@ private fun PlayingAreaContent(
     initialGameData: InitialGameData,
     bgColor: Color,
     getColor: (ItemFill, isDarkTheme: Boolean) -> Color,
-    getCurrentGuess: () -> MutableList<ItemFill?>,
+    getCurrentGuess: () -> List<ItemFill?>,
+    onCurrentGuessModify: (Int, ItemFill?) -> Unit,
     onMainBtnClicked: () -> Unit,
 ) {
     val fixedFill = remember (initialGameData.colorsCount) {
@@ -184,6 +214,7 @@ private fun PlayingAreaContent(
 
     listenToIsSelectedStates(
         getCurrentGuess = getCurrentGuess,
+        onCurrentGuessModify = onCurrentGuessModify,
         selectedFixedTileIndexState = selectedFixedTileIndexState,
         selectedMutableTileIndexState = selectedMutableTileIndexState,
         fixedFill = fixedFill
@@ -197,10 +228,9 @@ private fun PlayingAreaContent(
         PlayableAreaButton(
             onClick = remember(getCurrentGuess, selectedFixedTileIndexState, selectedMutableTileIndexState) {
                 {
-                    getCurrentGuess().replaceAll {
-                        null
+                    repeat(initialGameData.tilesCount) { index ->
+                        onCurrentGuessModify(index, null)
                     }
-
                     selectedFixedTileIndexState.value = null
                     selectedMutableTileIndexState.value = null
                 }
@@ -210,95 +240,16 @@ private fun PlayingAreaContent(
 
         Spacer(8)
 
-        val scrollState = rememberScrollState()
-        ScrollableContentIndication(
+        PlayingAreaScrollableContent(
             modifier = Modifier.weight(1f, fill = false),
-            scrollOrientation = Orientation.Horizontal,
-            scrollState = scrollState,
-            backgroundColor = bgColor,
-        ) {
-            Row(
-                modifier = Modifier
-                    .horizontalScroll(scrollState)
-            ) {
-                Spacer(8)
-
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-
-                    // Mutable Row
-                    PlayingAreaTilesRow(
-                        getCurrentGuess(),
-                        selectedIndexState = selectedMutableTileIndexState,
-                        getColor = getColor,
-                        dragAndDropTileType = DragAndDropTileType.Receive,
-                        onTap = remember(selectedMutableTileIndexState) {
-                            { index ->
-                                val isSelected = selectedMutableTileIndexState.value == index
-                                selectedMutableTileIndexState.value = if (isSelected) {
-                                    null
-                                } else {
-                                    index
-                                }
-                            }
-                        },
-                        onDoubleTap = remember(getCurrentGuess) {
-                            { index ->
-                                getCurrentGuess()[index] = null
-                            }
-                        },
-                        onDataReceived = remember {
-                            { index, fill ->
-                                val currentGuess = getCurrentGuess()
-                                currentGuess[index] = fill
-                            }
-                        },
-                    )
-
-                    Spacer(12)
-
-
-                    // Fixed row
-                    PlayingAreaTilesRow(
-                        fixedFill,
-                        selectedIndexState = selectedFixedTileIndexState,
-                        getColor = getColor,
-                        dragAndDropTileType = DragAndDropTileType.Send,
-                        onTap = remember(selectedFixedTileIndexState) {
-                            { index ->
-                                val isSelected = selectedFixedTileIndexState.value == index
-                                selectedFixedTileIndexState.value = if (isSelected) {
-                                    null
-                                } else {
-                                    index
-                                }
-                            }
-                        },
-                        onDoubleTap = remember(getCurrentGuess, fixedFill) {
-                            fillFirstEmptyTile@{ index ->
-                                val currentGuess = getCurrentGuess()
-                                val fill = fixedFill[index]
-                                val firstEmptyIndex = currentGuess.indexOfFirst { fill -> fill == null }
-                                if (firstEmptyIndex < 0) {
-                                    return@fillFirstEmptyTile
-                                }
-                                currentGuess[firstEmptyIndex] = fill
-                            }
-                        },
-                        onDataReceived = remember {
-                            { index, fill ->
-                                assert(false) // sender cannot receive data, but we keep backup
-                                val currentGuess = getCurrentGuess()
-                                currentGuess[index] = fill
-                            }
-                        },
-                    )
-                }
-
-                Spacer(8)
-            }
-        }
+            bgColor = bgColor,
+            getColor = getColor,
+            getCurrentGuess = getCurrentGuess,
+            selectedFixedTileIndexState = selectedFixedTileIndexState,
+            selectedMutableTileIndexState = selectedMutableTileIndexState,
+            onCurrentGuessModify = onCurrentGuessModify,
+            fixedFill = fixedFill
+        )
 
 
         Spacer(8)
@@ -312,7 +263,106 @@ private fun PlayingAreaContent(
 }
 
 @Composable
-fun PlayableAreaButton(
+private fun PlayingAreaScrollableContent(
+    modifier: Modifier = Modifier,
+    bgColor: Color,
+    getColor: (ItemFill, isDarkTheme: Boolean) -> Color,
+    getCurrentGuess: () -> List<ItemFill?>,
+    onCurrentGuessModify: (Int, ItemFill?) -> Unit,
+    selectedFixedTileIndexState : MutableState<Int?>,
+    selectedMutableTileIndexState : MutableState<Int?>,
+    fixedFill: ImmutableList<ItemFill>,
+) {
+    val scrollState = rememberScrollState()
+    ScrollableContentIndication(
+        modifier = modifier,
+        scrollOrientation = Orientation.Horizontal,
+        scrollState = scrollState,
+        backgroundColor = bgColor,
+    ) {
+        Row(
+            modifier = Modifier
+                .horizontalScroll(scrollState)
+        ) {
+            Spacer(8)
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+
+                // Mutable Row
+                PlayingAreaTilesRow(
+                    getCurrentGuess(),
+                    selectedIndexState = selectedMutableTileIndexState,
+                    getColor = getColor,
+                    dragAndDropTileType = DragAndDropTileType.Receive,
+                    onTap = remember(selectedMutableTileIndexState) {
+                        { index ->
+                            val isSelected = selectedMutableTileIndexState.value == index
+                            selectedMutableTileIndexState.value = if (isSelected) {
+                                null
+                            } else {
+                                index
+                            }
+                        }
+                    },
+                    onDoubleTap = remember(getCurrentGuess) {
+                        { index ->
+                            onCurrentGuessModify(index, null)
+                        }
+                    },
+                    onDataReceived = remember {
+                        { index, fill ->
+                            onCurrentGuessModify(index, fill)
+                        }
+                    },
+                )
+
+                Spacer(12)
+
+                // Fixed row
+                PlayingAreaTilesRow(
+                    fixedFill,
+                    selectedIndexState = selectedFixedTileIndexState,
+                    getColor = getColor,
+                    dragAndDropTileType = DragAndDropTileType.Send,
+                    onTap = remember(selectedFixedTileIndexState) {
+                        { index ->
+                            val isSelected = selectedFixedTileIndexState.value == index
+                            selectedFixedTileIndexState.value = if (isSelected) {
+                                null
+                            } else {
+                                index
+                            }
+                        }
+                    },
+                    onDoubleTap = remember(getCurrentGuess, fixedFill) {
+                        fillFirstEmptyTile@{ index ->
+                            val currentGuess = getCurrentGuess()
+                            val fill = fixedFill[index]
+                            val firstEmptyIndex = currentGuess.indexOfFirst { fill -> fill == null }
+                            if (firstEmptyIndex < 0) {
+                                return@fillFirstEmptyTile
+                            }
+                            onCurrentGuessModify(firstEmptyIndex, fill)
+                        }
+                    },
+                    onDataReceived = remember {
+                        { index, fill ->
+                            assert(false) // sender cannot receive data, but we keep backup
+                            onCurrentGuessModify(index, fill)
+                        }
+                    },
+                )
+            }
+
+            Spacer(8)
+        }
+    }
+}
+
+@Composable
+private fun PlayableAreaButton(
     text: String,
     onClick: () -> Unit,
 ) {
@@ -327,8 +377,9 @@ fun PlayableAreaButton(
 
 @SuppressLint("ComposableNaming")
 @Composable
-fun listenToIsSelectedStates(
-    getCurrentGuess: () -> MutableList<ItemFill?>,
+private fun listenToIsSelectedStates(
+    getCurrentGuess: () -> List<ItemFill?>,
+    onCurrentGuessModify: (Int, ItemFill?) -> Unit,
     selectedFixedTileIndexState: MutableState<Int?>,
     selectedMutableTileIndexState: MutableState<Int?>,
     fixedFill: ImmutableList<ItemFill>,
@@ -348,7 +399,7 @@ fun listenToIsSelectedStates(
             val selectedMutableRowIndex = selectedMutableTileIndexState.value
             if (selectedFixedRowIndex != null && selectedMutableRowIndex != null) {
                 val selectedFixedColor = fixedFill[selectedFixedRowIndex]
-                getCurrentGuess()[selectedMutableRowIndex] = selectedFixedColor
+                onCurrentGuessModify(selectedMutableRowIndex, selectedFixedColor)
                 selectedFixedTileIndexState.value = null
                 selectedMutableTileIndexState.value = null
             }
@@ -379,8 +430,7 @@ private fun PlayingAreaTilesRow(
     TilesRow(
         list.size,
         tileSize = playGameDimens.playTileSize,
-        modifier = Modifier
-            .then(modifier),
+        modifier = modifier,
         getIsSelected = remember(selectedIndexState) {
             { index ->
                 selectedIndexState.value == index
@@ -404,7 +454,7 @@ private fun PlayingAreaTilesRow(
                 Spacer(16.dp)
             }
         },
-        getTileItemContent = remember(list, getColor) {
+        getTileItemContent =
             { index ->
                 {
                     val isDarkTheme = isSystemInDarkTheme()
@@ -438,14 +488,26 @@ private fun PlayingAreaTilesRow(
                             ),
                         contentAlignment = Alignment.Center,
                     ) {
-                        color?.let {
-                            TileFill(
-                                color = color,
-                            )
+                        AnimatedContent(
+                            modifier = Modifier.size(
+                                playGameDimens.playTileSize.times(
+                                    TileFillFraction
+                                )
+                            ),
+                            targetState = color,
+                            transitionSpec = remember { { slideInVertically { it } togetherWith slideOutVertically { -it } } },
+                        ) { animatedColor ->
+                            if (animatedColor != null) {
+                                TileFill(
+                                    color = animatedColor,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Box(modifier = Modifier.fillMaxSize())
+                            }
                         }
                     }
                 }
-            }
         }
     )
 }
@@ -529,15 +591,77 @@ private fun Modifier.toDragAndDropModifier(
     }
 }
 
+@OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
 @Composable
 private fun HistoryItem(
     historyItem: HistoryItem,
     getColor: (ItemFill, isDarkTheme: Boolean) -> Color,
 ) {
+    val animatedHistoryGuess: List<MutableState<ItemFill?>> = remember {
+        MutableList(historyItem.guess.size) {
+            mutableStateOf(null)
+        }
+    }
+    val futureAnimatedHistoryGuess: MutableList<ItemFill?> = remember {
+        mutableListOf(*arrayOfNulls(historyItem.guess.size))
+    }
+
+    val animatedHistoryResult: MutableState<TurnResult?> = remember {
+        mutableStateOf(null)
+    }
+    var futureAnimatedHistoryResult: TurnResult? = remember {
+        null
+    }
+
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(historyItem) {
+        val hasGuessChanged = futureAnimatedHistoryGuess != historyItem.guess
+        val hasResultChanged = futureAnimatedHistoryResult != historyItem.result
+
+        if (hasGuessChanged) {
+            historyItem.guess.forEachIndexed { index, fill ->
+                futureAnimatedHistoryGuess[index] = fill
+            }
+        }
+        if (hasResultChanged) {
+            futureAnimatedHistoryResult = historyItem.result
+        }
+
+        coroutineScope.launch {
+            if (hasGuessChanged) {
+                delay(100)
+                historyItem.guess.forEachIndexed { index, fill ->
+                    delay(200)
+                    animatedHistoryGuess[index].value = fill
+                }
+            }
+
+            if (hasResultChanged) {
+               delay(
+                    if (hasGuessChanged) 750 else 250
+                )
+                animatedHistoryResult.value = historyItem.result
+            }
+        }
+    }
+
     HistoryTurn(
-        guessedValues = historyItem.guess,
-        result = historyItem.result,
-        getColor = getColor
+        size = animatedHistoryGuess.size,
+        result = animatedHistoryResult.value,
+        getItemColor = remember(historyItem) {
+            { index, isDarkTheme ->
+                val fill = animatedHistoryGuess[index].value
+                val color = fill?.let {
+                    getColor(
+                        fill,
+                        isDarkTheme,
+                    )
+                }
+
+                color
+            }
+        }
     )
 }
 

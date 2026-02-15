@@ -1,12 +1,7 @@
 package com.jozeftvrdy.game.guessorder.game.play
 
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.saveable.listSaver
-import androidx.compose.runtime.toMutableStateList
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.SavedStateHandleSaveableApi
-import androidx.lifecycle.viewmodel.compose.saveable
 import com.jozeftvrdy.game.guessorder.base.BaseViewModel
 import com.jozeftvrdy.game.guessorder.game.model.InitialGameData
 import com.jozeftvrdy.game.guessorder.game.model.ItemFill
@@ -24,20 +19,6 @@ class PlayGameViewModel(
     private val playRepo: PlayGameRepository,
 ): BaseViewModel<ScreenState, ScreenEffect>() {
 
-    private val emptyArray: Array<ItemFill?>
-        get() = Array(initialGameData.tilesCount) {
-            null
-        }
-    @OptIn(SavedStateHandleSaveableApi::class)
-    val currentGuess: MutableList<ItemFill?> by savedStateHandle.saveable(
-        saver = listSaver(
-            save = { it },
-            restore = { it.toMutableStateList() },
-        )
-    ) {
-        mutableStateListOf(*emptyArray)
-    }
-
     var savedSolution: List<ItemFill>?
         get() {
             return savedStateHandle[savedStateSolutionKey]
@@ -52,6 +33,15 @@ class PlayGameViewModel(
             initialGameData
         )
 
+    val animator = PlayGameAnimator(
+        initialGameData = initialGameData,
+        savedStateHandle = savedStateHandle,
+        vmScope = viewModelScope
+    )
+
+    val currentGuess: List<ItemFill?>
+        get() = animator.currentGuess
+
     fun eventOnButtonClicked() {
         if (currentGuess.size != initialGameData.tilesCount) {
             sendEffect(ScreenEffect.ShowUnexpectedError)
@@ -65,9 +55,7 @@ class PlayGameViewModel(
             }
         }
 
-        currentGuess.replaceAll {
-            null
-        }
+        clearCurrentGuessOnClick()
 
         var index: Int? = null
         updateState { oldState ->
@@ -117,14 +105,22 @@ class PlayGameViewModel(
 
                 if (result.greatSuccessCount == guess.size) {
                     sendEffect(ScreenEffect.NavigateToPostGame)
-                    clearSavedValues()
                 }
             }
         }
     }
 
-    fun clearSavedValues() {
-        viewModelScope.launch {
-        }
+    fun eventOnGuessModify(index: Int, fill: ItemFill?) {
+        animator.modifyCurrentGuessAnimated(
+            index to fill
+        )
+    }
+
+    fun clearCurrentGuessOnClick() {
+        animator.modifyCurrentGuessAnimated(
+            currentGuess.mapIndexed { index, _ ->
+                index to null
+            }
+        )
     }
 }

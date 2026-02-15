@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -326,17 +325,17 @@ fun Tile(
     )
 }
 
+const val TileFillFraction = 0.75f
+
 @Composable
 fun TileFill(
     color: Color,
-    modifier: Modifier = Modifier,
+    modifier: Modifier,
 ) {
     Surface(
         shape = CircleShape,
         color = color,
-        modifier = Modifier
-            .fillMaxSize(0.75f)
-            .then(modifier)
+        modifier = modifier
     ) {
 
     }
@@ -669,7 +668,8 @@ fun FilledTilePreview() {
             modifier = Modifier.padding(16.dp).size(48.dp),
         ) {
             TileFill(
-                color = Color.Red
+                color = Color.Red,
+                modifier = Modifier.size(24.dp)
             )
         }
     }
