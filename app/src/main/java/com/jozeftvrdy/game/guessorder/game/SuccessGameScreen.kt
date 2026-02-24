@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -18,10 +19,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jozeftvrdy.game.guessorder.R
 import com.jozeftvrdy.game.guessorder.game.model.InitialGameData
+import kotlin.math.roundToLong
 
 @Composable
 fun SuccessGameScreen(
     initialGameData: InitialGameData,
+    playedTimeMillis: Long,
     navigateToCreateGameScreen: () -> Unit,
     navigateToMainGameScreen: (InitialGameData) -> Unit,
 ) {
@@ -43,11 +46,12 @@ fun SuccessGameScreen(
         Spacer(modifier = Modifier
             .weight(0.33f))
 
-        Text(
-            text = stringResource(R.string.success_game_screen_subtitle),
-            fontSize = 20.sp,
-            textAlign = TextAlign.Center,
-        )
+        Subtitle(stringResource(R.string.success_game_screen_subtitle))
+        com.jozeftvrdy.game.guessorder.extension.Spacer(16)
+        PlayedTimeComponent(playedTimeMillis)
+        com.jozeftvrdy.game.guessorder.extension.Spacer(16)
+
+        Subtitle(stringResource(R.string.success_game_screen_subtitle2))
 
         Spacer(modifier = Modifier
             .weight(2f))
@@ -71,6 +75,64 @@ fun SuccessGameScreen(
                 "Start game with new params"
             )
         }
+    }
+}
+
+@Composable
+private fun Subtitle(
+    subtitle: String,
+) {
+    Text(
+        text = subtitle,
+        fontSize = 20.sp,
+        textAlign = TextAlign.Center,
+    )
+}
+
+@Composable
+private fun PlayedTimeComponent(
+    playedTimeMillis: Long
+) {
+    Row(
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Subtitle(stringResource(R.string.success_game_screen_played_time_description))
+        com.jozeftvrdy.game.guessorder.extension.Spacer(12)
+        Text(
+            text = calculateTimePlayedString(playedTimeMillis),
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+fun calculateTimePlayedString(
+    playedTimeMillis: Long
+): String {
+    var playedTimeSeconds = playedTimeMillis.div(1000f).roundToLong()
+    val secondsInHour = 3600
+    val secondsInMinute = 60
+    val playedHours = playedTimeSeconds.div(secondsInHour).toInt()
+    playedTimeSeconds -= playedHours * secondsInHour
+    val playedMinutes = playedTimeSeconds.div(secondsInMinute).toInt()
+    playedTimeSeconds -= playedMinutes * secondsInMinute
+    val playedSeconds = playedTimeSeconds.toInt()
+
+    val strings = mutableListOf<String>()
+    if (playedHours > 0) {
+        strings.add(pluralStringResource(R.plurals.hours_time, playedHours, playedHours))
+    }
+    if (playedMinutes > 0) {
+        strings.add(pluralStringResource(R.plurals.minutes_time, playedMinutes, playedMinutes))
+    }
+    if (playedSeconds > 0) {
+        strings.add(pluralStringResource(R.plurals.seconds_time, playedSeconds, playedSeconds))
+    }
+
+    return strings.joinToString(" ").also {
+        require(it.isNotEmpty())
     }
 }
 

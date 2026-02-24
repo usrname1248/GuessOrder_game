@@ -19,5 +19,19 @@
     <string name="play_game_screen_secondary_button_reset">Reset Guess</string>
     <string name="create_game_screen_main_button">Create</string>
     <string name="success_game_screen_title">Congratulation</string>
-    <string name="success_game_screen_subtitle">You have successfully solved this guess.\nMaybe this time try harder one?</string>
+    <string name="success_game_screen_subtitle">You have successfully solved this guess.</string>
+    <string name="success_game_screen_subtitle2">Maybe this time try harder one?</string>
+    <string name="success_game_screen_played_time_description">The solution was found in: </string>
+    <plurals name="hours_time">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+    <plurals name="minutes_time">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <plurals name="seconds_time">
+        <item quantity="one">%d second</item>
+        <item quantity="other">%d seconds</item>
+    </plurals>
 </resources>

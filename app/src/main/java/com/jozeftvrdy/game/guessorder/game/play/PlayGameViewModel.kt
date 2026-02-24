@@ -1,5 +1,6 @@
 package com.jozeftvrdy.game.guessorder.game.play
 
+import android.os.SystemClock
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.jozeftvrdy.game.guessorder.base.BaseViewModel
@@ -12,6 +13,7 @@ import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.launch
 
 private const val savedStateSolutionKey = "savedSolutionKey"
+private const val savedStatePlayedTimeKey = "savedStatePlayedTime"
 
 class PlayGameViewModel(
     override val savedStateHandle: SavedStateHandle,
@@ -42,6 +44,14 @@ class PlayGameViewModel(
     val currentGuess: List<ItemFill?>
         get() = animator.currentGuess
 
+    var timePlayedMillis: Long
+        get() = savedStateHandle[savedStatePlayedTimeKey] ?:0
+        set(value) {
+            savedStateHandle[savedStatePlayedTimeKey] = value
+        }
+
+    var timerStartTime: Long? = null
+
     fun eventOnButtonClicked() {
         if (currentGuess.size != initialGameData.tilesCount) {
             sendEffect(ScreenEffect.ShowUnexpectedError)
@@ -54,6 +64,8 @@ class PlayGameViewModel(
                 return
             }
         }
+
+        stopTimer()
 
         clearCurrentGuessOnClick()
 
@@ -104,7 +116,13 @@ class PlayGameViewModel(
                 }
 
                 if (result.greatSuccessCount == guess.size) {
-                    sendEffect(ScreenEffect.NavigateToPostGame)
+                    sendEffect(ScreenEffect.NavigateToPostGame(
+                        timePlayedMillis.also {
+                            require(it > 0)
+                        }
+                    ))
+                } else {
+                    startTimer(forceStart = true)
                 }
             }
         }
@@ -123,4 +141,24 @@ class PlayGameViewModel(
             }
         )
     }
+
+    fun startTimer() {
+        startTimer(forceStart = false)
+    }
+
+    private fun startTimer(forceStart: Boolean) {
+        if (!forceStart && state.value.history.isEmpty()) return
+
+        timerStartTime = getNowTimeForTimer()
+    }
+
+    fun stopTimer() {
+        val timerEndTime = getNowTimeForTimer()
+        val localTimerStartTime = timerStartTime?:return
+        require(timerEndTime > localTimerStartTime)
+        timePlayedMillis += timerEndTime - localTimerStartTime
+        timerStartTime = null
+    }
+
+    fun getNowTimeForTimer(): Long = SystemClock.elapsedRealtime()
 }

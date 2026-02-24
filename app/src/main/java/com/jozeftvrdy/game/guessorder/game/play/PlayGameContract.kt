@@ -27,7 +27,9 @@ data class ScreenState(
 ): Parcelable
 
 sealed class ScreenEffect {
-    data object NavigateToPostGame: ScreenEffect()
+    data class NavigateToPostGame(
+        val playedTimeMillis: Long,
+    ): ScreenEffect()
     data object ShowUnexpectedError: ScreenEffect()
     data object ShowEmptyGuessError: ScreenEffect()
 }

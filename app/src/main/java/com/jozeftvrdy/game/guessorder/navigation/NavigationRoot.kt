@@ -26,7 +26,8 @@ data class GameNavScreen(
 
 @Serializable
 data class SuccessGameNavScreen(
-    val usedData: InitialGameData
+    val usedData: InitialGameData,
+    val playedTimeMillis: Long,
 ): NavKey
 
 @OptIn(KoinExperimentalAPI::class)

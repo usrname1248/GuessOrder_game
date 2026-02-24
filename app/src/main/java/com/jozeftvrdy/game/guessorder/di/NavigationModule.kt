@@ -35,9 +35,10 @@ val navigationModule = module {
     navigation<GameNavScreen> { route ->
         PlayGameScreen(
             initialGameData = route.initData,
-            onGameFinish = {
+            onGameFinish = { playedTimeMillis ->
                 get<BackStackHolder>().goTo(SuccessGameNavScreen(
-                    route.initData
+                    route.initData,
+                        playedTimeMillis,
                 ))
             }
         )
@@ -46,6 +47,7 @@ val navigationModule = module {
     navigation<SuccessGameNavScreen> { route ->
         SuccessGameScreen(
             initialGameData = route.usedData,
+            playedTimeMillis = route.playedTimeMillis,
             navigateToMainGameScreen = { usedData ->
                 get<BackStackHolder>().apply {
                     removeLastUntil { backstack ->

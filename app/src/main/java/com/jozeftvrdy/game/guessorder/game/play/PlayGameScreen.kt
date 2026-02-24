@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
@@ -48,10 +49,14 @@ import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.eventFlow
 import com.jozeftvrdy.game.guessorder.R
 import com.jozeftvrdy.game.guessorder.extension.Spacer
 import com.jozeftvrdy.game.guessorder.extension.listenToEffects
@@ -71,6 +76,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -86,11 +94,22 @@ fun PlayGameScreen(
         parametersOf(initialGameData)
     },
     colorProvider: ColorProvider = koinInject(),
-    onGameFinish: () -> Unit,
+    onGameFinish: (playedTimeMillis: Long) -> Unit,
 ) {
     listenToEffects(viewModel, onGameFinish)
 
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val coroutineScope = rememberCoroutineScope()
+    val timerFlow = listenToFocusAndLifecycle()
+    coroutineScope.launch {
+        timerFlow.collectLatest { shouldBeRunning ->
+            if (shouldBeRunning) {
+                viewModel.startTimer()
+            } else {
+                viewModel.stopTimer()
+            }
+        }
+    }
 
     PlayGameContent(
         state = state,
@@ -669,14 +688,16 @@ private fun HistoryItem(
 @SuppressLint("ComposableNaming")
 private fun listenToEffects(
     viewModel: PlayGameViewModel,
-    onGameFinish: () -> Unit,
+    onGameFinish: (playedTimeMillis: Long) -> Unit,
 ) {
     val context = LocalContext.current
     val emptyTilesMessage = stringResource(R.string.empty_tiles_confirmed_message)
     val unexpectedErrorMessage = stringResource(R.string.unexpected_error_message)
     listenToEffects(viewModel.effect) { effect ->
         when (effect) {
-            ScreenEffect.NavigateToPostGame -> onGameFinish()
+            is ScreenEffect.NavigateToPostGame -> onGameFinish(
+                effect.playedTimeMillis
+            )
             ScreenEffect.ShowEmptyGuessError -> {
                 Toast.makeText(
                     context,
@@ -693,4 +714,35 @@ private fun listenToEffects(
             }
         }
     }
+}
+
+@Composable
+private fun listenToFocusAndLifecycle(): Flow<Boolean> {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val coroutineScope = rememberCoroutineScope()
+    var isResumed by remember { mutableStateOf(false) }
+    coroutineScope.launch {
+        lifecycleOwner.lifecycle.eventFlow.collect { event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    isResumed = true
+                }
+                Lifecycle.Event.ON_PAUSE -> {
+                    isResumed = false
+                }
+                else -> {}
+            }
+        }
+    }
+
+    val windowInfo = LocalWindowInfo.current
+    val isWindowFocused = windowInfo.isWindowFocused
+
+    val shouldTimerBeRunning = remember {
+        MutableStateFlow(false)
+    }
+    LaunchedEffect(isWindowFocused, isResumed) {
+        shouldTimerBeRunning.value = (isWindowFocused and isResumed)
+    }
+    return shouldTimerBeRunning
 }
