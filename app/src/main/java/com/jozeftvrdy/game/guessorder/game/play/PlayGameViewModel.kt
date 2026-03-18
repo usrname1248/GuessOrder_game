@@ -67,23 +67,6 @@ class PlayGameViewModel(
 
         stopTimer()
 
-        clearCurrentGuessOnClick()
-
-        var index: Int? = null
-        updateState { oldState ->
-            oldState.copy(
-                history = oldState.history.toMutableList().apply {
-                    this.add(
-                        HistoryItem(
-                            guess = guess.toPersistentList(),
-                            result = null
-                        )
-                    )
-                    index = this.lastIndex
-                }
-            )
-        }
-
         viewModelScope.launch {
             val solution = savedSolution?:run {
                 playRepo.generateSolution(
@@ -103,27 +86,33 @@ class PlayGameViewModel(
                 )
                 return@launch
             }.let { result ->
-                requireNotNull(index)
-                updateState { oldState ->
-                    oldState.copy(
-                        history = oldState.history.toMutableList().apply {
-                            val item = this[index].copy(
-                                result = result
-                            )
-                            this[index] = item
-                        }
-                    )
-                }
-
-                if (result.greatSuccessCount == guess.size) {
+                val isGuessSameAsResult = result.greatSuccessCount == guess.size
+                if (isGuessSameAsResult) {
                     sendEffect(ScreenEffect.NavigateToPostGame(
+                        successResult = guess.toPersistentList(),
                         timePlayedMillis.also {
                             require(it > 0)
                         }
                     ))
-                } else {
-                    startTimer(forceStart = true)
+                    return@launch
                 }
+
+                clearCurrentGuessOnClick()
+
+                updateState { oldState ->
+                    oldState.copy(
+                        history = oldState.history.toMutableList().apply {
+                            this.add(
+                                HistoryItem(
+                                    guess = guess.toPersistentList(),
+                                    result = result
+                                )
+                            )
+                        }
+                    )
+                }
+
+                startTimer(forceStart = true)
             }
         }
     }

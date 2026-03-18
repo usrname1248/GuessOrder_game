@@ -67,6 +67,7 @@ import com.jozeftvrdy.game.guessorder.game.create.TilesRow
 import com.jozeftvrdy.game.guessorder.game.model.InitialGameData
 import com.jozeftvrdy.game.guessorder.game.model.ItemFill
 import com.jozeftvrdy.game.guessorder.game.model.TurnResult
+import com.jozeftvrdy.game.guessorder.ui.components.LocalSharedElementsModifierProvider
 import com.jozeftvrdy.game.guessorder.ui.components.ScrollableContentIndication
 import com.jozeftvrdy.game.guessorder.ui.provider.ColorProvider
 import kotlinx.collections.immutable.ImmutableList
@@ -94,19 +95,24 @@ fun PlayGameScreen(
         parametersOf(initialGameData)
     },
     colorProvider: ColorProvider = koinInject(),
-    onGameFinish: (playedTimeMillis: Long) -> Unit,
+    onGameFinish: (
+        successResult: ImmutableList<ItemFill>,
+        playedTimeMillis: Long,
+    ) -> Unit,
 ) {
     listenToEffects(viewModel, onGameFinish)
 
     val state by viewModel.state.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val timerFlow = listenToFocusAndLifecycle()
-    coroutineScope.launch {
-        timerFlow.collectLatest { shouldBeRunning ->
-            if (shouldBeRunning) {
-                viewModel.startTimer()
-            } else {
-                viewModel.stopTimer()
+    LaunchedEffect(Unit) {
+        coroutineScope.launch {
+            timerFlow.collectLatest { shouldBeRunning ->
+                if (shouldBeRunning) {
+                    viewModel.startTimer()
+                } else {
+                    viewModel.stopTimer()
+                }
             }
         }
     }
@@ -312,6 +318,7 @@ private fun PlayingAreaScrollableContent(
                 // Mutable Row
                 PlayingAreaTilesRow(
                     getCurrentGuess(),
+//                    modifier = LocalSharedElementsModifierProvider.current.createModifierForSuccessRow(),
                     selectedIndexState = selectedMutableTileIndexState,
                     getColor = getColor,
                     dragAndDropTileType = DragAndDropTileType.Receive,
@@ -335,6 +342,11 @@ private fun PlayingAreaScrollableContent(
                             onCurrentGuessModify(index, fill)
                         }
                     },
+                    sharedComponent = remember(LocalSharedElementsModifierProvider.current) {
+                        { index ->
+                            LocalSharedElementsModifierProvider.current.createModifierForSuccessItem(index)
+                        }
+                    }
                 )
 
                 Spacer(12)
@@ -342,6 +354,7 @@ private fun PlayingAreaScrollableContent(
                 // Fixed row
                 PlayingAreaTilesRow(
                     fixedFill,
+//                    modifier = LocalSharedElementsModifierProvider.current.createModifierForPickedColorRow(),
                     selectedIndexState = selectedFixedTileIndexState,
                     getColor = getColor,
                     dragAndDropTileType = DragAndDropTileType.Send,
@@ -372,6 +385,11 @@ private fun PlayingAreaScrollableContent(
                             onCurrentGuessModify(index, fill)
                         }
                     },
+                    sharedComponent = remember(LocalSharedElementsModifierProvider.current) {
+                        { index ->
+                            LocalSharedElementsModifierProvider.current.createModifierForPickedColorRow(index)
+                        }
+                    }
                 )
             }
 
@@ -444,6 +462,7 @@ private fun PlayingAreaTilesRow(
     onTap: (Int) -> Unit,
     onDoubleTap: (Int) -> Unit,
     onDataReceived: (Int, ItemFill) -> Unit,
+    sharedComponent: @Composable (Int) -> Modifier,
     modifier: Modifier = Modifier
 ) {
     TilesRow(
@@ -519,7 +538,7 @@ private fun PlayingAreaTilesRow(
                             if (animatedColor != null) {
                                 TileFill(
                                     color = animatedColor,
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = sharedComponent(index).fillMaxSize()
                                 )
                             } else {
                                 Box(modifier = Modifier.fillMaxSize())
@@ -688,7 +707,10 @@ private fun HistoryItem(
 @SuppressLint("ComposableNaming")
 private fun listenToEffects(
     viewModel: PlayGameViewModel,
-    onGameFinish: (playedTimeMillis: Long) -> Unit,
+    onGameFinish: (
+        successResult: ImmutableList<ItemFill>,
+        playedTimeMillis: Long,
+    ) -> Unit,
 ) {
     val context = LocalContext.current
     val emptyTilesMessage = stringResource(R.string.empty_tiles_confirmed_message)
@@ -696,7 +718,8 @@ private fun listenToEffects(
     listenToEffects(viewModel.effect) { effect ->
         when (effect) {
             is ScreenEffect.NavigateToPostGame -> onGameFinish(
-                effect.playedTimeMillis
+                effect.successResult,
+                effect.playedTimeMillis,
             )
             ScreenEffect.ShowEmptyGuessError -> {
                 Toast.makeText(
@@ -721,16 +744,18 @@ private fun listenToFocusAndLifecycle(): Flow<Boolean> {
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
     var isResumed by remember { mutableStateOf(false) }
-    coroutineScope.launch {
-        lifecycleOwner.lifecycle.eventFlow.collect { event ->
-            when (event) {
-                Lifecycle.Event.ON_RESUME -> {
-                    isResumed = true
+    LaunchedEffect(Unit) {
+        coroutineScope.launch {
+            lifecycleOwner.lifecycle.eventFlow.collect { event ->
+                when (event) {
+                    Lifecycle.Event.ON_RESUME -> {
+                        isResumed = true
+                    }
+                    Lifecycle.Event.ON_PAUSE -> {
+                        isResumed = false
+                    }
+                    else -> {}
                 }
-                Lifecycle.Event.ON_PAUSE -> {
-                    isResumed = false
-                }
-                else -> {}
             }
         }
     }

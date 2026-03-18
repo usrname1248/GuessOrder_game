@@ -1,10 +1,12 @@
 package com.jozeftvrdy.game.guessorder.game
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,13 +20,23 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jozeftvrdy.game.guessorder.R
+import com.jozeftvrdy.game.guessorder.game.create.TileFill
+import com.jozeftvrdy.game.guessorder.game.create.TileFillFraction
+import com.jozeftvrdy.game.guessorder.game.create.TilesRow
 import com.jozeftvrdy.game.guessorder.game.model.InitialGameData
+import com.jozeftvrdy.game.guessorder.game.model.ItemFill
+import com.jozeftvrdy.game.guessorder.game.play.playGameDimens
+import com.jozeftvrdy.game.guessorder.ui.components.LocalSharedElementsModifierProvider
+import com.jozeftvrdy.game.guessorder.ui.provider.ColorProvider
+import kotlinx.collections.immutable.ImmutableList
 import kotlin.math.roundToLong
 
 @Composable
 fun SuccessGameScreen(
     initialGameData: InitialGameData,
+    resultCombination: ImmutableList<ItemFill>,
     playedTimeMillis: Long,
+    colorProvider: ColorProvider,
     navigateToCreateGameScreen: () -> Unit,
     navigateToMainGameScreen: (InitialGameData) -> Unit,
 ) {
@@ -44,7 +56,46 @@ fun SuccessGameScreen(
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier
-            .weight(0.33f))
+            .weight(0.2f))
+        TilesRow(
+            count = resultCombination.size,
+            tileSize = playGameDimens.playTileSize,
+            getIsSelected = remember {
+                { _ ->
+                    false
+                }
+            },
+            getIsEnabled = remember {
+                {
+                    true
+                }
+            },
+            betweenItemsSpacer = remember {
+                {
+                    com.jozeftvrdy.game.guessorder.extension.Spacer(16.dp)
+                }
+            },
+            onTileClick = null
+        ) { index ->
+            {
+                val isDarkTheme = isSystemInDarkTheme()
+                val fill = resultCombination[index]
+                val color = fill.let {
+                    colorProvider.provideColorValue(it, isDarkTheme)
+                }
+
+                TileFill(
+                    color = color,
+                    modifier = LocalSharedElementsModifierProvider.current.createModifierForSuccessItem(index).size(
+                        playGameDimens.playTileSize.times(
+                            TileFillFraction
+                        )
+                    )
+                )
+            }
+        }
+
+        com.jozeftvrdy.game.guessorder.extension.Spacer(16)
 
         Subtitle(stringResource(R.string.success_game_screen_subtitle))
         com.jozeftvrdy.game.guessorder.extension.Spacer(16)

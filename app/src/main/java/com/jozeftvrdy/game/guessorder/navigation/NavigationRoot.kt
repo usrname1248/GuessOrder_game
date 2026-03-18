@@ -8,6 +8,8 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.jozeftvrdy.game.guessorder.game.model.BackStackHolder
 import com.jozeftvrdy.game.guessorder.game.model.InitialGameData
+import com.jozeftvrdy.game.guessorder.game.model.ItemFill
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.serialization.Serializable
 import org.koin.compose.navigation3.koinEntryProvider
 import org.koin.core.annotation.KoinExperimentalAPI
@@ -27,6 +29,7 @@ data class GameNavScreen(
 @Serializable
 data class SuccessGameNavScreen(
     val usedData: InitialGameData,
+    val successResult: ImmutableList<ItemFill>,
     val playedTimeMillis: Long,
 ): NavKey
 

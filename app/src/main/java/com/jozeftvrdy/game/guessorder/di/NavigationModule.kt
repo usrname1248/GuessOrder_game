@@ -8,6 +8,7 @@ import com.jozeftvrdy.game.guessorder.game.play.PlayGameScreen
 import com.jozeftvrdy.game.guessorder.navigation.CreateGameNavScreen
 import com.jozeftvrdy.game.guessorder.navigation.GameNavScreen
 import com.jozeftvrdy.game.guessorder.navigation.SuccessGameNavScreen
+import org.koin.compose.koinInject
 import org.koin.core.annotation.KoinExperimentalAPI
 import org.koin.dsl.module
 import org.koin.dsl.navigation3.navigation
@@ -35,9 +36,10 @@ val navigationModule = module {
     navigation<GameNavScreen> { route ->
         PlayGameScreen(
             initialGameData = route.initData,
-            onGameFinish = { playedTimeMillis ->
+            onGameFinish = { successResult, playedTimeMillis ->
                 get<BackStackHolder>().goTo(SuccessGameNavScreen(
                     route.initData,
+                    successResult,
                         playedTimeMillis,
                 ))
             }
@@ -47,6 +49,7 @@ val navigationModule = module {
     navigation<SuccessGameNavScreen> { route ->
         SuccessGameScreen(
             initialGameData = route.usedData,
+            resultCombination = route.successResult,
             playedTimeMillis = route.playedTimeMillis,
             navigateToMainGameScreen = { usedData ->
                 get<BackStackHolder>().apply {
@@ -56,6 +59,7 @@ val navigationModule = module {
                     goTo(GameNavScreen(usedData))
                 }
             },
+            colorProvider = koinInject(),
             navigateToCreateGameScreen = {
                 get<BackStackHolder>().apply {
                     removeLastUntil { backstack ->

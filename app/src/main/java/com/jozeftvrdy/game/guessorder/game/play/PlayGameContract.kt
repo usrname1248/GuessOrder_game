@@ -28,6 +28,7 @@ data class ScreenState(
 
 sealed class ScreenEffect {
     data class NavigateToPostGame(
+        val successResult: ImmutableList<ItemFill>,
         val playedTimeMillis: Long,
     ): ScreenEffect()
     data object ShowUnexpectedError: ScreenEffect()

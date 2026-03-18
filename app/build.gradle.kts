@@ -9,6 +9,10 @@ plugins {
 }
 
 android {
+    signingConfigs {
+        create("release") {
+        }
+    }
     namespace = "com.jozeftvrdy.game.guessorder"
     compileSdk {
         version = release(36)
@@ -31,6 +35,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {

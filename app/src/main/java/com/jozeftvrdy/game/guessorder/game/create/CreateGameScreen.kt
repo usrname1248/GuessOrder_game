@@ -41,6 +41,7 @@ import com.jozeftvrdy.game.guessorder.extension.listenToEffects
 import com.jozeftvrdy.game.guessorder.extension.rememberFunction
 import com.jozeftvrdy.game.guessorder.game.model.InitialGameData
 import com.jozeftvrdy.game.guessorder.ui.components.FullScreenProgressIndicator
+import com.jozeftvrdy.game.guessorder.ui.components.LocalSharedElementsModifierProvider
 import com.jozeftvrdy.game.guessorder.ui.dimens.screenDimens
 import com.jozeftvrdy.game.guessorder.ui.provider.ColorProvider
 import kotlinx.collections.immutable.toPersistentList
@@ -374,7 +375,7 @@ fun CreateGameScreenDataContent(
                                         val color = colorProvider.provideColorValue(fill, isDarkTheme)
 
                                         TileFill(
-                                            modifier = Modifier.size(dimens.tileSize.times(TileFillFraction)),
+                                            modifier = LocalSharedElementsModifierProvider.current.createModifierForPickedColorRow(index).size(dimens.tileSize.times(TileFillFraction)),
                                             color = color
                                         )
                                     }
